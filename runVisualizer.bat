@@ -1,0 +1,1 @@
+python_virtualenv\Scripts\python.exe src\app.py
