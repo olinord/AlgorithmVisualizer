@@ -4,8 +4,6 @@ Created on Aug 16, 2014
 @author: oli
 '''
 
-from math import sin, cos
-
 from euclid import Quaternion, Vector3, Matrix4
 
 
@@ -54,6 +52,7 @@ class Camera(object):
         self.GenerateCameraMatrix()
         
     def MouseMotion(self, deltaX, deltaY):
+        
         self.position += self.right * 0.05 * deltaX
         self.GenerateCameraMatrix()
         self.position -= self.up * 0.05 * deltaY 

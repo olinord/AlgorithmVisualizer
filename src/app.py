@@ -6,13 +6,16 @@ from OpenGL.GL.shaders import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from OpenGL.arrays import vbo
-from PySide.QtGui import QMainWindow, QApplication, QBoxLayout, QPushButton, QFontDatabase
+from PySide.QtCore import Qt
+from PySide.QtGui import QMainWindow, QWidget, QApplication, QBoxLayout, QFontDatabase, QComboBox
 from PySide.QtOpenGL import QGLWidget
-from euclid import Matrix4
 
+from AlgorithmRunner.algorithmLoader import AlgorithmLoader
 from Rendering.camera import Camera
 from Rendering.utilities import UnitCube
-from UI.icons import PLAY_BUTTON_ICON
+from UI.Button import PlayButton, StopButton
+from euclid import Matrix4
+from fileUtils import AbsJoin, APP_ROOT, LoadYamlFromRoot
 
 
 def override(interface_class):
@@ -38,33 +41,20 @@ class AlgorithmVisualizerWidget(QGLWidget):
         self.lastMouseX = 0
         self.lastMouseY = 0
         self.camera = Camera([3.0, 3.0, 3.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0])
-        
-        self.setupLayout()
-        
+        self.setProperty("class", "AlgorithmVisualizerWidget")
+                
     def SetVertices(self, mesh):
-        self.SetRenderingDataFromMesh(mesh)
-        
-    def setupLayout(self):
-        # Todo polish up the UI
-        horizontalBoxLayout = QBoxLayout(QBoxLayout.TopToBottom, self)        
-        playButton = QPushButton()
-        playButton.setText(PLAY_BUTTON_ICON)
-        
-        horizontalBoxLayout.addStretch(1)    
-        horizontalBoxLayout.addWidget(playButton)        
+        self.SetRenderingDataFromMesh(mesh)        
     
     @override(QGLWidget)
     def initializeGL(self):
         "runs once, after OpenGL context is created"
         self.pointProgram = None
-        
-        glutInit()
-        # glEnable(GL_DEPTH_TEST)
-        glClearColor(0.3, 0.3, 0.3, 0)
+
+        glClearColor(0.3, 0.3, 0.3, 1.0)
         
         # Set up the shader.
-        self.loadShaders()
-            
+        self.loadShaders()            
         
     @override(QGLWidget)
     def paintGL(self):
@@ -133,8 +123,8 @@ class AlgorithmVisualizerWidget(QGLWidget):
             glDrawArrays(GL_TRIANGLES, 0, self.triangleCount * 3)
 
     def loadShaders(self):
-        with open("pointShader.vs") as pointVertexShaderFile:
-            with open("pointShader.fs") as pointPixelShaderFile:
+        with open(AbsJoin(APP_ROOT, "resources/shaders/pointShader.vs")) as pointVertexShaderFile:
+            with open(AbsJoin(APP_ROOT, "resources/shaders/pointShader.fs")) as pointPixelShaderFile:
                 self.pointProgram = compileProgram(compileShader(pointVertexShaderFile.read(), GL_VERTEX_SHADER),
                     compileShader(pointPixelShaderFile.read(), GL_FRAGMENT_SHADER))
         self.WVPUniformLocation = glGetUniformLocation(self.pointProgram, "WVP")
@@ -178,27 +168,93 @@ class AlgorithmVisualizerWidget(QGLWidget):
         
         self.edgeVertexArrayObject = self.CreateBuffers(edgeVertices, edgeColors)
         self.edgeCount = len(mesh.GetEdges())       
+     
         
+class MainWidget(QWidget):
+    "The main widget containing the rendering window and all of the controls"
+    
+    def __init__(self, parent=None):
+        super(MainWidget, self).__init__(parent)
+        self.setProperty("class", "MainWidget")
+        self.algorithmLoader = AlgorithmLoader(LoadYamlFromRoot("algorithms/algorithms.yaml"))
+        
+        self.layout = QBoxLayout(QBoxLayout.LeftToRight)
+        self.layout.setContentsMargins(0, 0, 0, 0)     
+        
+        self.setLayout(self.layout)  
+        
+        self.SetLeftWidgets()
+        
+    
+    def SetLeftWidgets(self):
+        horizontalLayout = QBoxLayout(QBoxLayout.TopToBottom)
+        horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        
+        algorithms = QComboBox(self)
+        algorithmNames = sorted([algorithm["name"].lower() for algorithm in self.algorithmLoader.algorithmDefinitions.itervalues()])
+        
+        for name in algorithmNames:
+            algorithms.addItem(name[0].upper() + name[1:])
+
+        horizontalLayout.addWidget(algorithms)
+        
+        self.gl_widget = AlgorithmVisualizerWidget()
+        horizontalLayout.addWidget(self.gl_widget)
+        
+        buttonLayout = QBoxLayout(QBoxLayout.LeftToRight)        
+        playButton = PlayButton()
+        stopButton = StopButton()        
+        buttonLayout.addWidget(playButton)
+        buttonLayout.addWidget(stopButton)
+        buttonLayout.setAlignment(Qt.AlignHCenter)
+        
+        horizontalLayout.addLayout(buttonLayout)
+        
+        self.layout.addLayout(horizontalLayout, 1)
+    
+    def SetDefaultVertexSelection(self):
+        self.gl_widget.SetVertices(UnitCube())
+            
+    def setupLayout(self):
+
+        buttonLayout = QBoxLayout(QBoxLayout.LeftToRight)        
+        playButton = PlayButton()
+        stopButton = StopButton()        
+        buttonLayout.addWidget(playButton)
+        buttonLayout.addWidget(stopButton)
+        
+        self.verticalBoxLayout.addStretch(1)
+        self.verticalBoxLayout.addStretch(1)             
+        self.verticalBoxLayout.addLayout(buttonLayout)
         
 
 class MainWindow(QApplication):
     "Simple application for the algorithm visualizer"
+    
     def __init__(self):
         QApplication.__init__(self, sys.argv)
         self.setApplicationName("Algorithm Visualizer")
         self.fontID = QFontDatabase.addApplicationFont("../resources/fontawesome-webfont.ttf")
+        
+        with open(AbsJoin(APP_ROOT, "resources/stylesheet.qss")) as styleSheetFile:
+            self.setStyleSheet(styleSheetFile.read())
+                    
         self.setFont("FontAwesome")
-        self.mainWindow = QMainWindow()
-        
-        self.gl_widget = AlgorithmVisualizerWidget()
+        self.mainWindow = QMainWindow()     
+        self.mainWindow.setProperty("class", "MainWindow") 
+                        
         self.mainWindow.resize(1024, 768)
-        self.mainWindow.setCentralWidget(self.gl_widget)
-        
+        self.mainWidget = MainWidget()  
+        self.mainWindow.setCentralWidget(self.mainWidget)    
+                            
         self.mainWindow.show()
         
-        self.gl_widget.SetVertices(UnitCube(1.0))
+        # this needs to happen after the main window is shown
+        self.mainWidget.SetDefaultVertexSelection()
+        
         sys.exit(self.exec_()) 
-
+        
+        
 
 if __name__ == "__main__":
     MainWindow()
