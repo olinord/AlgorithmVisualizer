@@ -1,9 +1,1 @@
-Scale:
-    name: Scale points from center
-    dimensions: 3 # two dimensional
-    vertexType: point # this works on lines	
-
-Scale2:
-    name: sadlfkjasldfkj lasdkfj alsdkfj asldfkj sdlfkj alsdkfj lkj sdfljasd flkj sdflkj alsdkfj sdf
-    dimensions: 3 # two dimensional
-    vertexType: point # this works on lines	
+selectionSort.SelectionSort: Selection Sort

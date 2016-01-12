@@ -1,1 +1,1 @@
-python_virtualenv\Scripts\python.exe src\app.py
+python_virtualenv\Scripts\python.exe -B src\app.py

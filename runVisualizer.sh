@@ -1,1 +1,1 @@
-python_virtualenv/bin/python src/app.py
+python_virtualenv/bin/python -B src/app.py
