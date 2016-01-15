@@ -278,8 +278,6 @@ class MainWindow(QApplication):
 
         self.setApplicationName("Algorithm Visualizer")
 
-        # QFontDatabase.addApplicationFont(AbsJoin(APP_ROOT, "resources/fontawesome-webfont.tff"))
-
         with open(AbsJoin(APP_ROOT, "resources/stylesheet.qss")) as styleSheetFile:
             self.setStyleSheet(styleSheetFile.read())
 
