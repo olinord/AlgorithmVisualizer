@@ -1,22 +1,22 @@
+
 QPushButton
 {
-	color: black;
-	/*border-color: grey;
-	border-style: inset;*/
-    border-width: 3px;
-    border-radius: 4px;
-    font: bold 14px;
+		color: black;
+  	border-width: 3px;
+  	border-radius: 4px;
+  	font: bold 14px;
 }
 
 QPushButton[class=playback]
-{	 
+{
      width: 25px;
      height: 25px;
-     max-width: 25px;     
-     font: 15px;
+     max-width: 25px;
+		 font: 15px;
 }
 
 QWidget[class=MainWindow]
 {
-	background-color: rgb(100, 100, 100);	
+		background-color: rgb(100, 100, 100);
+		
 }

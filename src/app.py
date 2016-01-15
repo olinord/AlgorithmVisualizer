@@ -6,8 +6,9 @@ from OpenGL.GL.shaders import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from OpenGL.arrays import vbo
-from PySide.QtCore import Qt
-from PySide.QtGui import QMainWindow, QWidget, QApplication, QBoxLayout, QFontDatabase, QComboBox
+
+from qtpy.QtCore import Qt
+from qtpy.QtGui import QMainWindow, QWidget, QApplication, QBoxLayout, QFontDatabase, QComboBox
 from PySide.QtOpenGL import QGLWidget
 
 from AlgorithmRunner.algorithmLoader import AlgorithmLoader
@@ -270,7 +271,14 @@ class MainWindow(QApplication):
 
     def __init__(self):
         QApplication.__init__(self, sys.argv)
+
+        # Enable High DPI display with PyQt5
+        if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
+            self.setAttribute(Qt.AA_UseHighDpiPixmaps)
+
         self.setApplicationName("Algorithm Visualizer")
+
+        # QFontDatabase.addApplicationFont(AbsJoin(APP_ROOT, "resources/fontawesome-webfont.tff"))
 
         with open(AbsJoin(APP_ROOT, "resources/stylesheet.qss")) as styleSheetFile:
             self.setStyleSheet(styleSheetFile.read())
