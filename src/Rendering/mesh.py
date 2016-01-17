@@ -98,6 +98,18 @@ class Mesh(object):
                 yield edge.GetColor().green
                 yield edge.GetColor().alpha
 
-    def SetColor(self):
-        for triangle in self.triangles:
-            triangle.SetColor
+    def GetPointVertexGenerator(self):
+        mx = self.position.x
+        my = self.position.y
+        mz = self.position.z
+        for point in self.points:
+            yield point.x + mx
+            yield point.y + my
+            yield point.z + mz
+
+    def GetPointColorGenerator(self):
+        for point in self.points:
+            yield point.color.red
+            yield point.color.blue
+            yield point.color.green
+            yield point.color.alpha

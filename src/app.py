@@ -8,7 +8,7 @@ from OpenGL.GLUT import *
 from OpenGL.arrays import vbo
 
 from qtpy.QtCore import Qt
-from qtpy.QtGui import QMainWindow, QWidget, QApplication, QBoxLayout, QFontDatabase, QComboBox
+from qtpy.QtGui import QMainWindow, QWidget, QApplication, QBoxLayout, QFontDatabase, QComboBox, QPushButton
 from PySide.QtOpenGL import QGLWidget
 
 from AlgorithmRunner.algorithmLoader import AlgorithmLoader
@@ -17,6 +17,7 @@ from Rendering.utilities import UnitCube, GenerateRectangle
 from UI.Button import PlayButton, StopButton
 from euclid import Matrix4
 from fileUtils import AbsJoin, APP_ROOT, LoadYamlFromRoot
+from AlgorithmRunner.algorithmConst import ALGORITHM_VALUE_INTEGER, ALGORITHM_VALUE_2D_POINT, ALGORITHM_VALUE_3D_POINT, ALGORITHM_RENDER_TRIANGLES, ALGORITHM_RENDER_LINES, ALGORITHM_RENDER_POINTS
 
 
 def override(interface_class):
@@ -38,8 +39,14 @@ class AlgorithmVisualizerWidget(QGLWidget):
         QGLWidget.__init__(self)
         self.triangleCount = 0
         self.edgeCount = 0
+        self.pointCount = 0
         self.triangleVertexArrayObject = None
         self.edgeVertexArrayObject = None
+        self.pointVertexArrayObject = None
+
+        self.drawTriangles = False
+        self.drawLines = False
+        self.drawPoints = False
 
         self.lastMouseX = 0
         self.lastMouseY = 0
@@ -110,18 +117,21 @@ class AlgorithmVisualizerWidget(QGLWidget):
                                                                         self.WVPMatrix.i, self.WVPMatrix.j, self.WVPMatrix.k, self.WVPMatrix.l,
                                                                         self.WVPMatrix.m, self.WVPMatrix.n, self.WVPMatrix.o, self.WVPMatrix.p
                                                                       ])
+            if self.drawPoints:
+                glBindVertexArray(self.pointVertexArrayObject)
+                glDrawArrays(GL_POINTS, 0, self.pointCount)
 
-            glBindVertexArray(self.edgeVertexArrayObject)
-            glDrawArrays(GL_LINES, 0, self.edgeCount)
+            if self.drawLines:
+                glBindVertexArray(self.edgeVertexArrayObject)
+                glDrawArrays(GL_LINES, 0, self.edgeCount)
 
-            glEnable(GL_BLEND)
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-            glDepthMask(0)
+            if self.drawTriangles:
+                glEnable(GL_BLEND)
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+                glDepthMask(0)
 
-            glBindVertexArray(self.triangleVertexArrayObject)
-            # Modern GL makes the draw call really simple
-            # All the complexity has been pushed elsewhere
-            glDrawArrays(GL_TRIANGLES, 0, self.triangleCount)
+                glBindVertexArray(self.triangleVertexArrayObject)
+                glDrawArrays(GL_TRIANGLES, 0, self.triangleCount)
 
     def loadShaders(self):
         with open(AbsJoin(APP_ROOT, "resources/shaders/pointShader.vs")) as pointVertexShaderFile:
@@ -159,7 +169,7 @@ class AlgorithmVisualizerWidget(QGLWidget):
         return vaoId
 
 
-    def SetRenderingDataFromMesh(self, mesh, reFocusCamera=False):
+    def SetRenderingDataFromMesh(self, mesh, renderTypes, reFocusCamera=False):
         if not isinstance(mesh, list):
             mesh = [mesh]
 
@@ -167,13 +177,23 @@ class AlgorithmVisualizerWidget(QGLWidget):
         triangleColors = []
         edgeVertices = []
         edgeColors = []
+        pointVertices = []
+        pointColors = []
+
+        self.drawTriangles = ALGORITHM_RENDER_TRIANGLES in renderTypes
+        self.drawLines = ALGORITHM_RENDER_LINES in renderTypes
+        self.drawPoints = ALGORITHM_RENDER_POINTS in renderTypes
 
         for m in mesh:
-            triangleVertices.extend([x for x in m.GetTriangleVertexGenerator()])
-            triangleColors.extend([x for x in m.GetTriangleColorGenerator()])
-
-            edgeVertices.extend([x for x in m.GetEdgeVertexGenerator()])
-            edgeColors.extend([x for x in m.GetEdgeColorGenerator()])
+            if self.drawTriangles:
+                triangleVertices.extend([x for x in m.GetTriangleVertexGenerator()])
+                triangleColors.extend([x for x in m.GetTriangleColorGenerator()])
+            if self.drawLines:
+                edgeVertices.extend([x for x in m.GetEdgeVertexGenerator()])
+                edgeColors.extend([x for x in m.GetEdgeColorGenerator()])
+            if self.drawPoints:
+                pointVertices.extend([x for x in m.GetPointVertexGenerator()])
+                pointColors.extend([x for x in m.GetPointColorGenerator()])
 
         if reFocusCamera:
             minX, maxX, minY, maxY = None, None, None, None
@@ -194,8 +214,14 @@ class AlgorithmVisualizerWidget(QGLWidget):
 
         self.triangleCount = int(len(triangleVertices)/3.0)
         self.edgeCount = int(len(edgeVertices)/3.0)
-        self.triangleVertexArrayObject = self.CreateBuffers(triangleVertices, triangleColors)
-        self.edgeVertexArrayObject = self.CreateBuffers(edgeVertices, edgeColors)
+        self.pointCount = int(len(pointVertices)/3.0)
+        if self.drawTriangles:
+            self.triangleVertexArrayObject = self.CreateBuffers(triangleVertices, triangleColors)
+        if self.drawLines:
+            self.edgeVertexArrayObject = self.CreateBuffers(edgeVertices, edgeColors)
+        if self.drawPoints:
+            self.pointVertexArrayObject = self.CreateBuffers(pointVertices, pointColors)
+        self.update()
 
 
 class MainWidget(QWidget):
@@ -206,30 +232,61 @@ class MainWidget(QWidget):
         self.setProperty("class", "MainWidget")
         self.algorithmLoader = AlgorithmLoader(LoadYamlFromRoot("algorithms/algorithms.yaml"))
 
+        # UI stuff
+        self.algorithms = None
+        self.gl_widget = None
+        self.rightHandLayout = None
         self.layout = QBoxLayout(QBoxLayout.LeftToRight)
         self.layout.setContentsMargins(0, 0, 0, 0)
 
         self.setLayout(self.layout)
 
-        self.SetLeftWidgets()
+        self.SetupView()
 
+    def SetupView(self):
+        verticalLayout= QBoxLayout(QBoxLayout.LeftToRight)
 
-    def SetLeftWidgets(self):
-        horizontalLayout = QBoxLayout(QBoxLayout.TopToBottom)
-        horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        leftLayout = self.SetupLeftSide()
+        rightLayout = self.SetupRightSide()
 
+        verticalLayout.addLayout(leftLayout, 1)
+        verticalLayout.addLayout(rightLayout, 0)
+        self.layout.addLayout(verticalLayout, 1)
+
+    def SetupRightSide(self):
+        rightLayout = QBoxLayout(QBoxLayout.TopToBottom)
+        rightLayout.setContentsMargins(0, 0, 0, 0)
+
+        generateButton = QPushButton("generate")
+        rightLayout.addWidget(generateButton)
+
+        return rightLayout
+
+    def SetupLeftSide(self):
+        leftLayout = QBoxLayout(QBoxLayout.TopToBottom)
+        leftLayout.setContentsMargins(0, 0, 0, 0)
+
+        self.SetupTop(leftLayout)
+        self.SetupCenter(leftLayout)
+        self.SetupBottom(leftLayout)
+
+        return leftLayout
+
+    def SetupTop(self, layout):
         self.algorithms = QComboBox(self)
-        algorithmNamesAndIDs = self.algorithmLoader.GetAllAlgorithmNameAndIDs()
+        algorithmNames = self.algorithmLoader.GetAllAlgorithmNames()
 
-        for name, _ in algorithmNamesAndIDs:
+        for name in algorithmNames:
             self.algorithms.addItem(name[0].upper() + name[1:])
 
         self.algorithms.currentIndexChanged['QString'].connect(self.handleAlgorithmChanged)
-        horizontalLayout.addWidget(self.algorithms)
+        layout.addWidget(self.algorithms)
 
+    def SetupCenter(self, layout):
         self.gl_widget = AlgorithmVisualizerWidget()
-        horizontalLayout.addWidget(self.gl_widget)
+        layout.addWidget(self.gl_widget)
 
+    def SetupBottom(self, layout):
         buttonLayout = QBoxLayout(QBoxLayout.LeftToRight)
         playButton = PlayButton()
         stopButton = StopButton()
@@ -237,18 +294,7 @@ class MainWidget(QWidget):
         buttonLayout.addWidget(stopButton)
         buttonLayout.setAlignment(Qt.AlignHCenter)
 
-        horizontalLayout.addLayout(buttonLayout)
-
-        self.layout.addLayout(horizontalLayout, 1)
-
-    def SetDefaultVertexSelection(self):
-        import random
-        algorithm = self.algorithmLoader.GetAlgorithmInstance("selectionSort.SelectionSort")
-        algorithm.setData([ random.random() * 100 for _ in range(50) ])
-
-        self.gl_widget.SetRenderingDataFromMesh(algorithm.getRenderData(), reFocusCamera=True)
-        # modify the orhtogonal perspective based of the width and height of the data
-        # self.gl_widget.SetRenderingDataFromMesh(GenerateRectangle(10, 10))
+        layout.addLayout(buttonLayout)
 
     def setupLayout(self):
 
@@ -258,12 +304,21 @@ class MainWidget(QWidget):
         buttonLayout.addWidget(playButton)
         buttonLayout.addWidget(stopButton)
 
-        self.verticalBoxLayout.addStretch(1)
-        self.verticalBoxLayout.addStretch(1)
-        self.verticalBoxLayout.addLayout(buttonLayout)
+        self.rightHandLayout.addStretch(1)
+        self.rightHandLayout.addStretch(1)
+        self.rightHandLayout.addLayout(buttonLayout)
 
-    def handleAlgorithmChanged(self, text):
-        print 'algorithmChanged: %s' %  text
+    def ShowTopAlgorithm(self):
+        # send out a fake algorithmChanged for the first algorithm in the list
+        self.handleAlgorithmChanged(self.algorithms.currentText())
+
+    def handleAlgorithmChanged(self, algorithmName):
+        print "algorithm changed to ", algorithmName
+        import random
+        algorithm = self.algorithmLoader.GetAlgorithmInstance(algorithmName)
+        algorithm.setData([ random.random() * 100 for _ in range(50) ])
+        renderTypes = self.algorithmLoader.GetAlgorithmRenderTypes(algorithmName)
+        self.gl_widget.SetRenderingDataFromMesh(algorithm.getRenderData(), renderTypes, reFocusCamera=True)
 
 
 class MainWindow(QApplication):
@@ -291,7 +346,7 @@ class MainWindow(QApplication):
         self.mainWindow.show()
 
         # this needs to happen after the main window is shown
-        self.mainWidget.SetDefaultVertexSelection()
+        self.mainWidget.ShowTopAlgorithm()
 
         sys.exit(self.exec_())
 

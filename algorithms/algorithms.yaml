@@ -1,1 +1,23 @@
-selectionSort.SelectionSort: Selection Sort
+Selection Sort:
+  code_path: selectionSort.SelectionSort
+  value_type: integer
+  render_types:
+  - triangles
+  - lines
+  - points
+
+Selection Sort2:
+  code_path: selectionSort.SelectionSort
+  value_type: integer
+  render_types:
+  - triangles
+  #- lines
+  #- points
+
+# Triangle Name:
+#  type: value_sorting or 2d_render or 3d_render
+#  code_path: path to algorthm relatve to the algorithms directory
+#  renders:
+#  - triangles
+#  - lines
+#  - points

@@ -14,7 +14,7 @@ class Algorithm(object):
     # Color description to color values
     # For example:
     # "Selected": (0.0, 1.0, 0.0, 1.0)
-    # "Ignored": (0.0, 1.0, 0.0, 1.0)
+    # "Ignored": (0.3, 0.3, 0.3, 1.0)
     COLORS = {}
 
     def __init__(self):
@@ -23,6 +23,10 @@ class Algorithm(object):
 
     def setData(self, data):
         self.data = data
+        self.setupRenderingData()
+
+    def setupRenderingData(self):
+        raise NotImplementedError("%s: does not implement the 'setupRenderingData' function" % type(self))
 
     def getRenderData(self):
         raise NotImplementedError("%s: does not implement the 'getRenderData' function" % type(self))

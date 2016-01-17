@@ -2,9 +2,22 @@
 QPushButton
 {
 		color: black;
-  	border-width: 3px;
-  	border-radius: 4px;
-  	font: bold 14px;
+    border-style: outset;
+    border-width: 2px;
+    border-radius: 4px;
+    border-color: black;
+		background-color: rgb(110, 110, 110);
+    font: bold 14px;
+}
+
+QPushButton:hover
+{
+	background-color: rgb(150, 150, 150);
+}
+
+QPushButton:pressed
+{
+	background-color: rgb(170, 170, 170);
 }
 
 QPushButton[class=playback]
@@ -12,11 +25,9 @@ QPushButton[class=playback]
      width: 25px;
      height: 25px;
      max-width: 25px;
-		 font: 15px;
 }
 
 QWidget[class=MainWindow]
 {
-		background-color: rgb(100, 100, 100);
-		
+		background-color: rgb(60, 60, 60);
 }

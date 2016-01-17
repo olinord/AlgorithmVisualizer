@@ -23,8 +23,7 @@ class SelectionSort(Algorithm):
         self.stepIndex = 0
         self.renderingData = []
 
-    def setData(self, data):
-        Algorithm.setData(self, data)
+    def setupRenderingData(self):
         self.renderingData = [
             (value, GenerateRectangle(self.width, value, UNSORTED_COLOR))
              for value in self.data
