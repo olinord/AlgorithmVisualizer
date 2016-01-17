@@ -7,7 +7,7 @@ from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from OpenGL.arrays import vbo
 
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, QObject, Signal
 from qtpy.QtGui import QMainWindow, QWidget, QApplication, QBoxLayout, QFontDatabase, QComboBox, QPushButton
 from PySide.QtOpenGL import QGLWidget
 
@@ -18,6 +18,7 @@ from UI.Button import PlayButton, StopButton
 from euclid import Matrix4
 from fileUtils import AbsJoin, APP_ROOT, LoadYamlFromRoot
 from AlgorithmRunner.algorithmConst import ALGORITHM_VALUE_INTEGER, ALGORITHM_VALUE_2D_POINT, ALGORITHM_VALUE_3D_POINT, ALGORITHM_RENDER_TRIANGLES, ALGORITHM_RENDER_LINES, ALGORITHM_RENDER_POINTS
+from AlgorithmRunner.algorithmRunner import AlgorithmRunner
 
 
 def override(interface_class):
@@ -169,7 +170,7 @@ class AlgorithmVisualizerWidget(QGLWidget):
         return vaoId
 
 
-    def SetRenderingDataFromMesh(self, mesh, renderTypes, reFocusCamera=False):
+    def SetRenderingDataFromMesh(self, mesh, renderTypes=None, reFocusCamera=False):
         if not isinstance(mesh, list):
             mesh = [mesh]
 
@@ -180,9 +181,10 @@ class AlgorithmVisualizerWidget(QGLWidget):
         pointVertices = []
         pointColors = []
 
-        self.drawTriangles = ALGORITHM_RENDER_TRIANGLES in renderTypes
-        self.drawLines = ALGORITHM_RENDER_LINES in renderTypes
-        self.drawPoints = ALGORITHM_RENDER_POINTS in renderTypes
+        if renderTypes is not None:
+            self.drawTriangles = ALGORITHM_RENDER_TRIANGLES in renderTypes
+            self.drawLines = ALGORITHM_RENDER_LINES in renderTypes
+            self.drawPoints = ALGORITHM_RENDER_POINTS in renderTypes
 
         for m in mesh:
             if self.drawTriangles:
@@ -224,6 +226,11 @@ class AlgorithmVisualizerWidget(QGLWidget):
         self.update()
 
 
+class Communicate(QObject):
+    # create a new signal on the fly and name it 'speak'
+    updateRenderInfo = Signal(list)
+
+
 class MainWidget(QWidget):
     "The main widget containing the rendering window and all of the controls"
 
@@ -231,6 +238,9 @@ class MainWidget(QWidget):
         super(MainWidget, self).__init__(parent)
         self.setProperty("class", "MainWidget")
         self.algorithmLoader = AlgorithmLoader(LoadYamlFromRoot("algorithms/algorithms.yaml"))
+        self.algorithmRunner = AlgorithmRunner(self.updateAlgorithmRenderingData)
+
+        self.communicator = Communicate()
 
         # UI stuff
         self.algorithms = None
@@ -285,40 +295,40 @@ class MainWidget(QWidget):
     def SetupCenter(self, layout):
         self.gl_widget = AlgorithmVisualizerWidget()
         layout.addWidget(self.gl_widget)
+        self.communicator.updateRenderInfo.connect(self.gl_widget.SetRenderingDataFromMesh)
 
     def SetupBottom(self, layout):
         buttonLayout = QBoxLayout(QBoxLayout.LeftToRight)
         playButton = PlayButton()
+        playButton.clicked.connect(self.startAlgorithm)
         stopButton = StopButton()
+        stopButton.clicked.connect(self.stopAlgorithm)
         buttonLayout.addWidget(playButton)
         buttonLayout.addWidget(stopButton)
         buttonLayout.setAlignment(Qt.AlignHCenter)
 
         layout.addLayout(buttonLayout)
 
-    def setupLayout(self):
-
-        buttonLayout = QBoxLayout(QBoxLayout.LeftToRight)
-        playButton = PlayButton()
-        stopButton = StopButton()
-        buttonLayout.addWidget(playButton)
-        buttonLayout.addWidget(stopButton)
-
-        self.rightHandLayout.addStretch(1)
-        self.rightHandLayout.addStretch(1)
-        self.rightHandLayout.addLayout(buttonLayout)
-
-    def ShowTopAlgorithm(self):
+    def showTopAlgorithm(self):
         # send out a fake algorithmChanged for the first algorithm in the list
         self.handleAlgorithmChanged(self.algorithms.currentText())
 
     def handleAlgorithmChanged(self, algorithmName):
-        print "algorithm changed to ", algorithmName
         import random
-        algorithm = self.algorithmLoader.GetAlgorithmInstance(algorithmName)
-        algorithm.setData([ random.random() * 100 for _ in range(50) ])
+        self.algorithm = self.algorithmLoader.GetAlgorithmInstance(algorithmName)
+        self.algorithm.setData([ random.random() * 100 for _ in range(50) ])
         renderTypes = self.algorithmLoader.GetAlgorithmRenderTypes(algorithmName)
-        self.gl_widget.SetRenderingDataFromMesh(algorithm.getRenderData(), renderTypes, reFocusCamera=True)
+        self.gl_widget.SetRenderingDataFromMesh(self.algorithm.getRenderData(), renderTypes, reFocusCamera=True)
+        self.algorithmRunner.SetAlgorithm(self.algorithm)
+
+    def startAlgorithm(self):
+        self.algorithmRunner.run()
+
+    def stopAlgorithm(self):
+        self.algorithmRunner.stop()
+
+    def updateAlgorithmRenderingData(self):
+        self.communicator.updateRenderInfo.emit(self.algorithm.getRenderData())
 
 
 class MainWindow(QApplication):
@@ -346,7 +356,7 @@ class MainWindow(QApplication):
         self.mainWindow.show()
 
         # this needs to happen after the main window is shown
-        self.mainWidget.ShowTopAlgorithm()
+        self.mainWidget.showTopAlgorithm()
 
         sys.exit(self.exec_())
 

@@ -43,12 +43,14 @@ class SelectionSort(Algorithm):
         indexOfLowestValue = self.stepIndex
         selectedValue, selectedRenderingData = self.renderingData[indexOfLowestValue]
         selectedRenderingData.SetColor(COMPARE_COLOR)
-        with self.context("Selecting lowest value"):
+        with self.stepContext("Selecting lowest value"):
             lowestRenderingData = None
-            for i, value, renderingData in enumerate(self.renderingData[self.stepIndex:]):
+            lowestValue = None
+            for i, data in enumerate(self.renderingData[self.stepIndex:]):
+                value, renderingData = data
                 renderingData.SetColor(COMPARE_COLOR)
-                yield
-                if value < lowestValue:
+                yield 0.1
+                if value < lowestValue or lowestValue is None:
                     lowestValue = value
                     indexOfLowestValue = i
                     if lowestRenderingData is not None:
@@ -57,15 +59,16 @@ class SelectionSort(Algorithm):
                     lowestRenderingData.SetColor(LOWEST_VALUE_COLOR)
                 else:
                     renderingData.SetColor(UNSORTED_COLOR)
-                yield
+                yield 0.1
 
-        with self.context("Swapping"):
+        with self.stepContext("Swapping"):
             tmp = self.renderingData[self.stepIndex]
             self.renderingData[self.stepIndex] = self.renderingData[indexOfLowestValue]
             self.renderingData[indexOfLowestValue] = tmp
-            yield
+            yield 0.1
 
         self.stepIndex = self.stepIndex + 1
 
     def endCondition(self):
-        raise self.stepIndex == len(self.renderingData)
+        print self.stepIndex == len(self.renderingData)
+        return self.stepIndex == len(self.renderingData)

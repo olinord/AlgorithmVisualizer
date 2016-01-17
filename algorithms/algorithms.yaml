@@ -3,16 +3,6 @@ Selection Sort:
   value_type: integer
   render_types:
   - triangles
-  - lines
-  - points
-
-Selection Sort2:
-  code_path: selectionSort.SelectionSort
-  value_type: integer
-  render_types:
-  - triangles
-  #- lines
-  #- points
 
 # Triangle Name:
 #  type: value_sorting or 2d_render or 3d_render

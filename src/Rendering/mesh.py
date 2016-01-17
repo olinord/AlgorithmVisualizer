@@ -113,3 +113,7 @@ class Mesh(object):
             yield point.color.blue
             yield point.color.green
             yield point.color.alpha
+
+    def SetColor(self, color):
+        for renderable in self.triangles + self.edges + self.points:
+            renderable.SetColor(color)

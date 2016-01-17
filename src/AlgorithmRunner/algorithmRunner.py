@@ -1,5 +1,6 @@
 from Queue import Queue
 import sys
+import time
 from threading import Thread
 
 from algorithmInterface import Algorithm
@@ -21,7 +22,9 @@ class AlgorithmThread(Thread):
     def run(self):
         try:
             self.functionToRun()
-        except Exception:
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
             self.exceptionBucket.put(sys.exc_info())
 
 
@@ -35,7 +38,8 @@ class AlgorithmRunner(object):
         self.thread = None
         self.forcedToStop = False
         self.threadExceptionBucket = Queue()
-        self.renderRefreshMethod = renderRefreshMethod or lambda: pass
+        self.renderRefreshMethod = renderRefreshMethod
+        self.sleepTime = 1.0
 
     def SetAlgorithm(self, algorithm):
         if not isinstance(algorithm, Algorithm):
@@ -51,17 +55,26 @@ class AlgorithmRunner(object):
         self.thread.start()
 
     def _run(self):
-        while not self.algorithm.endCondition() and not self.forcedToStop:
-            for s in self.algorithm.step():
-                self.renderRefreshMethod()
+        print "running"
+        while not self.forcedToStop:
+            print "running 1"
+            self.step()
+            print "running 2"
+            time.sleep(self.sleepTime)
+            print "running 3"
+        print "done"
 
     def isRunning(self):
         return not self.thread is None and self.thread.isAlive()
 
     def step(self):
         if not self.algorithm.endCondition():
-            for s in self.algorithm.step():
+            for sleepMultiplier in self.algorithm.step():
+                multiplier = 1.0
+                if sleepMultiplier is not None:
+                    multiplier = sleepMultiplier
                 self.renderRefreshMethod()
+                time.sleep(multiplier * self.sleepTime)
 
     def stop(self):
         self.forcedToStop = True
