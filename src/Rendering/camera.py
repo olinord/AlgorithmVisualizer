@@ -66,7 +66,7 @@ class Camera(object):
         self.__setCameraMode(self.MODE_PERSPECTIVE)
         self.position.y -= self.height * 0.5
         self.pointOfInterest = self.position
-        self.pointOfInterest.z -= 10
+        self.pointOfInterest.z += 10
 
     def SetPerspectiveMode(self):
         self.__setCameraMode(self.MODE_PERSPECTIVE)

@@ -51,7 +51,7 @@ class AlgorithmVisualizerWidget(QGLWidget):
 
         self.lastMouseX = 0
         self.lastMouseY = 0
-        self.camera = Camera([0.0, 0.0, 1.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0])
+        self.camera = Camera([0.0, 0.0, -1.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0])
         self.WVPMatrix = None
         self.setProperty("class", "AlgorithmVisualizerWidget")
         self.UpdateWVPMatrix()

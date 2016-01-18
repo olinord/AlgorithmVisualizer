@@ -3,9 +3,9 @@ from Rendering.utilities import GenerateRectangle
 from Rendering.color import Color
 
 UNSORTED_COLOR = Color(1.0, 1.0, 1.0, 1.0)
-SORTED_COLOR = Color(0.1, 1.0, 0.1, 1.0)
-COMPARE_COLOR = Color(0.7, 0.0, 0.7, 1.0)
-LOWEST_VALUE_COLOR = Color(0.1, 1.0, 0.1, 0.7)
+SORTED_COLOR = Color(0.4, 1.0, 0.4, 1.0)
+COMPARE_COLOR = Color(0.7, 0.7, 0.0, 1.0)
+LOWEST_VALUE_COLOR = Color(1.0, 1.0, 0.0, 1.0)
 
 class SelectionSort(Algorithm):
     DIMENSIONS = 2
@@ -41,34 +41,36 @@ class SelectionSort(Algorithm):
 
     def step(self):
         indexOfLowestValue = self.stepIndex
-        selectedValue, selectedRenderingData = self.renderingData[indexOfLowestValue]
-        selectedRenderingData.SetColor(COMPARE_COLOR)
+
         with self.stepContext("Selecting lowest value"):
-            lowestRenderingData = None
-            lowestValue = None
+            lowestValue, lowestRenderingData = self.renderingData[indexOfLowestValue]
+            lowestRenderingData.SetColor(COMPARE_COLOR)
             for i, data in enumerate(self.renderingData[self.stepIndex:]):
                 value, renderingData = data
                 renderingData.SetColor(COMPARE_COLOR)
-                yield 0.1
+                yield 0.5
                 if value < lowestValue or lowestValue is None:
                     lowestValue = value
-                    indexOfLowestValue = i
+                    indexOfLowestValue = self.stepIndex + i
                     if lowestRenderingData is not None:
                         lowestRenderingData.SetColor(UNSORTED_COLOR)
                     lowestRenderingData = renderingData
                     lowestRenderingData.SetColor(LOWEST_VALUE_COLOR)
                 else:
                     renderingData.SetColor(UNSORTED_COLOR)
-                yield 0.1
+                yield 0.5
 
         with self.stepContext("Swapping"):
             tmp = self.renderingData[self.stepIndex]
             self.renderingData[self.stepIndex] = self.renderingData[indexOfLowestValue]
             self.renderingData[indexOfLowestValue] = tmp
-            yield 0.1
+            self.renderingData[self.stepIndex][1].SetColor(SORTED_COLOR)
+            if self.stepIndex != indexOfLowestValue:
+                self.renderingData[indexOfLowestValue][1].SetColor(UNSORTED_COLOR)
+
+            yield 0.5
 
         self.stepIndex = self.stepIndex + 1
 
     def endCondition(self):
-        print self.stepIndex == len(self.renderingData)
         return self.stepIndex == len(self.renderingData)

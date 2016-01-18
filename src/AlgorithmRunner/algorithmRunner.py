@@ -39,7 +39,7 @@ class AlgorithmRunner(object):
         self.forcedToStop = False
         self.threadExceptionBucket = Queue()
         self.renderRefreshMethod = renderRefreshMethod
-        self.sleepTime = 1.0
+        self.sleepTime = 0.1
 
     def SetAlgorithm(self, algorithm):
         if not isinstance(algorithm, Algorithm):
@@ -55,14 +55,9 @@ class AlgorithmRunner(object):
         self.thread.start()
 
     def _run(self):
-        print "running"
         while not self.forcedToStop:
-            print "running 1"
             self.step()
-            print "running 2"
             time.sleep(self.sleepTime)
-            print "running 3"
-        print "done"
 
     def isRunning(self):
         return not self.thread is None and self.thread.isAlive()
